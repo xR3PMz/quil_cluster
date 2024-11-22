@@ -47,7 +47,7 @@ B. Si vous souhaitez executer l'outil depuis un autre poste (qui n'est pas un no
     `./config_cluster.sh`
 
 Attention, si vous avez déjà éditer vos config.yml veillez à ce qu'il n'y est pas de configuration existante.
-
+Vos nodes doivent être démarré, minage Quil arrêté! (logique vous m'direz!)
 Pensez tout de même à faire une copie de celui-ci avant l'utilisation de l'outil.
 
 
