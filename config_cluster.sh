@@ -22,10 +22,10 @@ echo "  ██╔══██║██╔══██║╚════██║
 echo -e "  ██║  ██║██║  ██║███████║██║  ██║██║  ██║██║ "
 echo -e "  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ "
 echo ""
-echo -e "${CYAN}                  MINING TOOLS                  ${RESET}"
-echo -e "${ITALIC}${BOLD}              WWW.ADVANCED-HASH.AI              ${RESET}${RESET}"
+echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
+echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e " ${BOLD}             Quil - Cluster Tools               ${RESET}"
+echo -e " ${BOLD}      QUIL - Cluster Tools ${RED}${ITALIC}(BETA v0.1) 🛠️      ${RESET}"
 echo ""
 
 
@@ -55,7 +55,7 @@ update_remote_config() {
   temp_config="/tmp/remote_config_$ip.yml"
   echo -e "$cluster_config" > "$temp_config"
 
-  echo -e "${CYAN}Mise à jour de la configuration sur ${BOLD} $ip${RESET}...${RESET}"
+  echo -e "⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
   sshpass -p "1" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
 
   SSH_COMMAND="
@@ -67,10 +67,10 @@ update_remote_config() {
 
   if [ $? -eq 0 ]; then
     echo -e ""
-    echo -e "${GREEN}Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}${RESET}"
+    echo -e "✅ ${GREEN} Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}${RESET}"
   else
     echo -e ""
-    echo -e "${RED}Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}${RESET}"
+    echo -e "❌ ${RED} Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}${RESET}"
   fi
 
   sudo rm -f "$temp_config"
@@ -80,11 +80,11 @@ check_rigs_accessible() {
   local rigs=("${@}")
   for rig in "${rigs[@]}"; do
     echo -e ""
-    echo "Vérification de l'accessibilité du rig $rig..."
+    echo -e "🟡  Vérification de l'accessibilité du node ${BOLD}$rig...${RESET}"
 
     if ! ping -c 1 "$rig" &> /dev/null; then
       echo -e ""
-      echo "Erreur : Impossible d'atteindre le rig $rig. Veuillez vérifier la connexion."
+      echo -e "❌ ${RED}${BOLD} Erreur : Impossible d'atteindre le node $rig. Veuillez vérifier la connexion.${RESET}"
       exit 1
     fi
   done
@@ -96,7 +96,7 @@ generate_suggested_commands() {
   local master_ip=$2
   local slaves_ips=("${@:3}")
   
-  echo -e "\n###### ${GREEN}${BOLD}Commandes suggérées pour démarrer le cluster${RESET} ${RESET}######"
+  echo -e "\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
   echo -e ""
   # Commande pour le master
   echo -e "${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) :"
@@ -135,55 +135,58 @@ generate_start_commands() {
     slave_threads=$((slave_threads + threads))
   done
 
-  echo -e "\n${GREEN}${BOLD}Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
-  echo -e "${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) : $master_command"
+  echo -e "\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
+  echo -e "\n${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) : $master_command"
   for i in "${!slaves_ips[@]}"; do
     echo -e "${YELLOW}Slave${RESET} (${slaves_ips[$i]}) : ${slave_commands[$i]}"
   done
   
-  read -p "Voulez-vous exécuter ces commandes sur les rigs distants ? (y/n) : " confirm
+  read -p "Voulez-vous exécuter ces commandes sur les nodes distants ? (y/n) : " confirm
   if [[ "$confirm" == "y" ]]; then
     for i in "${!slave_commands[@]}"; do
       slave_ip="${slaves_ips[$i]}"
       slave_command="${slave_commands[$i]}"
-      echo -e "${ORANGE}Exécution de la commande pour le slave sur${RESET} $slave_ip..."
+      echo ""
+      echo -e "🟡 ${YELLOW}Exécution de la commande pour le slave sur ${BOLD}$slave_ip...${RESET}"
+      echo ""
       sshpass -p "1" ssh -o StrictHostKeyChecking=no user@"$slave_ip" "cd /home/user/ceremonyclient/node && $slave_command"
       if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Commande pour le slave envoyée avec succès sur${RESET} $slave_ip."
+        echo -e "🟢 ${GREEN} Commande pour le slave envoyée avec succès sur${RESET} $slave_ip."
       else
-        echo -e "${RED}Erreur lors de l'envoi de la commande pour le slave sur${RESET} $slave_ip."
+        echo -e "🔴 ${RED} Erreur lors de l'envoi de la commande pour le slave sur${RESET} $slave_ip."
       fi
     done
-
-    echo -e "${CYAN}Attente de 15 secondes avant d'exécuter la commande pour le master...${RESET}"
+    echo ""
+    echo -e "⏳ Attente de 15 secondes avant d'exécuter la commande pour le master..."
     sleep 15
-
-    echo -e "${YELLOW}Exécution de la commande pour le master sur $master_ip...${RESET}"
+    echo ""
+    echo -e "🟡 ${YELLOW} Exécution de la commande pour le master sur ${BOLD}$master_ip...${RESET}"
+    echo ""
     sshpass -p "1" ssh -o StrictHostKeyChecking=no user@"$master_ip" "cd /home/user/ceremonyclient/node && $master_command"
     if [ $? -eq 0 ]; then
-      echo -e "${GREEN}Commande pour le ${BOLD}Master${RESET} envoyée avec succès sur${RESET} $master_ip."
+      echo -e "🟢 ${GREEN} Commande pour le ${BOLD}Master${RESET} envoyée avec succès sur${RESET} $master_ip."
     else
-      echo -e "${RED}Erreur lors de l'envoi de la commande pour le Master sur${RESET} $master_ip."
+      echo -e "🔴 ${RED} Erreur lors de l'envoi de la commande pour le Master sur${RESET} $master_ip."
     fi
 
-    echo -e "${GREEN}${BOLD}Cluster démarré avec succès sur les machines distantes.${RESET}${RESET}"
+    echo -e "✅ ${GREEN}${BOLD} Cluster démarré avec succès sur les nodes distantes.${RESET} 🚀"
   else
-    echo -e "${RED}${BOLD}Opération annulée par l'utilisateur.${RESET}"
+    echo -e "❌ ${RED}${BOLD} Opération annulée par l'utilisateur.${RESET}"
   fi
 }
 
 # Menu principal
 echo -e ""
-echo -e "----- ${CYAN}${BOLD}Menu principal :${RESET}${RESET} -----"
+echo -e "---------- ${CYAN}${BOLD}MENU PRINCIPAL${RESET}${RESET} ----------"
 echo -e ""
-echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster${RESET}"
-echo -e "${BOLD}2.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET}"
-
+echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster${RESET} ⚡"
+echo -e "${BOLD}2.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET} 🔧"
+echo ""
 read -p "Veuillez choisir une option (1 ou 2) : " choice
 
 if [[ "$choice" == "1" ]]; then
   echo -e ""
-  echo -e "${CYAN}--- ${BOLD}Démarrer un cluster${RESET} ---${RESET}"
+  echo -e "--- ${CYAN}${BOLD}DEMARRER UN CLUSTER${RESET} ---"
   echo -e ""
 
   read -p "Entrez l'adresse IP locale du master (ex: 192.168.1.20) : " master_ip
@@ -196,15 +199,14 @@ if [[ "$choice" == "1" ]]; then
       break
     fi
     read -p "Entrez l'adresse IP locale du slave (ex: 192.168.1.23) : " slave_ip
-    read -p "Entrez le nombre de threads utilisés par le slave (ex: 32) : " slave_threads
+    # read -p "Entrez le nombre de threads utilisés par le slave (ex: 32) : " slave_threads
     slaves_ips+=("$slave_ip")
   done
 
   generate_start_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
 
 elif [[ "$choice" == "2" ]]; then
-  echo -e ""
-  echo -e "${CYAN}--- ${BOLD}Configurer un cluster${RESET} ---${RESET}"
+  echo -e "\n--- ${CYAN}${BOLD}CONFIGURER UN NOUVEAU CLUSTER${RESET} ---"
   echo -e ""
 
   read -p "Entrez l'adresse IP locale du master (ex: 192.168.1.20) : " master_ip
@@ -226,19 +228,20 @@ elif [[ "$choice" == "2" ]]; then
     fi
 
     read -p "Entrez l'adresse IP locale du slave (ex: 192.168.1.23) : " slave_ip
-    read -p "Entrez le nombre de threads utilisés par le slave (ex: 32) : " slave_threads
+    # read -p "Entrez le nombre de threads utilisés par le slave (ex: 32) : " slave_threads
 
     is_master="false"
-    slave_multiaddrs=$(generate_data_worker_multiaddrs "$slave_ip" "$slave_threads")
+    slave_multiaddrs=$(generate_data_worker_multiaddrs "$slave_ip" "$master_threads")
     cluster_config+="\n  $(echo "$slave_multiaddrs" | sed 's/ /,\n  /g'),"
     slaves_ips+=("$slave_ip")
   done
 
-  cluster_config+="\n  ]  # zeub"
+  cluster_config+="\n  ]  # Generate from Quil - Cluster Tools"
 
-  echo -e "\n${ORANGE}${BOLD}Configuration générée pour le cluster :${RESET}${RESET}"
+  echo -e "\nℹ️ ${ORANGE}${BOLD} Configuration générée pour le cluster :${RESET}${RESET}"
+  echo ""
   echo -e "$cluster_config"
-
+  echo ""
   rigs=("$master_ip" "${slaves_ips[@]}")
   check_rigs_accessible "${rigs[@]}"
 
@@ -251,5 +254,5 @@ elif [[ "$choice" == "2" ]]; then
   generate_suggested_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
 
 else
-  echo -e "${RED}Choix invalide. Le script va maintenant se terminer.${RESET}"
+  echo -e "❌ ${RED} Choix invalide. Le script va maintenant se terminer.${RESET}"
 fi
