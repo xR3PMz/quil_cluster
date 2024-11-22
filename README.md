@@ -27,39 +27,41 @@
 
 3. 
 
-A. Sur le node qui execute le script et qui vous servira à configurer installez sshpass/jq ainsi que l'outil
-
-  Pour vos nodes sous HiveOS:
+  A. Sur le node qui execute le script et qui vous servira à configurer installez sshpass/jq ainsi que l'outil
   
-    sudo apt update && sudo apt install sshpass jq
-    cd /home/user/ceremonyclient/node/
-    wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh
-    chmod +x config_cluster_hiveOS.sh
-    wget https://advanced-hash.ai/downloads/para.sh
-    chmod +x para.sh
-    ./config_cluster_hiveOS.sh
-
-  Pour vos nodes sous Linux:
-  
-    sudo apt update && sudo apt install sshpass jq
-    cd /home/user/ceremonyclient/node/
-    wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh
-    chmod +x config_cluster_linux.sh
-    wget https://advanced-hash.ai/downloads/para.sh
-    chmod +x para.sh
-    ./config_cluster_linux.sh
-    
-B. Si vous souhaitez executer l'outil depuis un autre poste (qui n'est pas un node):
-
   Pour vos nodes sous HiveOS:
-    `sudo apt update && sudo apt install sshpass jq`
     
-    `wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh && chmod +x config_cluster_hiveOS.sh`
-    
+      sudo apt update && sudo apt install sshpass jq
+      cd /home/user/ceremonyclient/node/
+      wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh
+      chmod +x config_cluster_hiveOS.sh
+      wget https://advanced-hash.ai/downloads/para.sh
+      chmod +x para.sh
+      ./config_cluster_hiveOS.sh
+  
   Pour vos nodes sous Linux:
-    `sudo apt update && sudo apt install sshpass jq`
     
-    `wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh && chmod +x config_cluster_linux.sh`
+      sudo apt update && sudo apt install sshpass jq
+      cd /home/user/ceremonyclient/node/
+      wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh
+      chmod +x config_cluster_linux.sh
+      wget https://advanced-hash.ai/downloads/para.sh
+      chmod +x para.sh
+      ./config_cluster_linux.sh
+      
+  B. Si vous souhaitez executer l'outil depuis un autre poste (qui n'est pas un node):
+  
+  Pour vos nodes sous HiveOS:
+    
+      sudo apt update && sudo apt install sshpass jq
+      
+      wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh && chmod +x config_cluster_hiveOS.sh
+      
+  Pour vos nodes sous Linux:
+    
+      sudo apt update && sudo apt install sshpass jq
+      
+      wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh && chmod +x config_cluster_linux.sh
 
 3. Pour executer l'outil: 
 
