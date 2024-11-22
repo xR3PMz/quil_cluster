@@ -25,7 +25,7 @@ echo ""
 echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
 echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e " ${BOLD}      QUIL - Cluster Tools ${RED}${ITALIC}(BETA v0.1) 🛠️      ${RESET}"
+echo -e " ${BOLD}    QUIL - Cluster Tools ${RED}${ITALIC}(Linux BETA v0.1) 🛠️    ${RESET}"
 echo ""
 
 CONFIG_PATH="$HOME/ceremonyclient/node/.config/config.yml"
@@ -54,14 +54,14 @@ update_remote_config() {
   echo -e "$cluster_config" > "$temp_config"
 
   echo -e "\n⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
-  sshpass -p "1" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
+  sshpass -p "$password" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
 
   SSH_COMMAND="
     sudo sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH &&
     sudo rm /tmp/cluster_config.yml
   "
 
-  sshpass -p "1" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
 
   if [ $? -eq 0 ]; then
     echo -e ""
@@ -139,13 +139,15 @@ generate_start_commands() {
   
   read -p "Voulez-vous exécuter ces commandes sur les nodes distants ? (y/n) : " confirm
   if [[ "$confirm" == "y" ]]; then
+  echo -e "\n "
+  read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe connexion SSH : " password
     for i in "${!slave_commands[@]}"; do
       slave_ip="${slaves_ips[$i]}"
       slave_command="${slave_commands[$i]}"
       echo ""
       echo -e "🟡 ${YELLOW}Exécution de la commande pour le slave sur ${BOLD}$slave_ip...${RESET}"
       echo ""
-      sshpass -p "1" ssh -o StrictHostKeyChecking=no user@"$slave_ip" "cd $HOME/ceremonyclient/node && $slave_command"
+      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$slave_ip" "cd $HOME/ceremonyclient/node && $slave_command"
       if [ $? -eq 0 ]; then
         echo -e "🟢 ${GREEN} Commande pour le slave envoyée avec succès sur${RESET} $slave_ip."
       else
@@ -158,7 +160,7 @@ generate_start_commands() {
     echo ""
     echo -e "🟡 ${YELLOW} Exécution de la commande pour le master sur ${BOLD}$master_ip...${RESET}"
     echo ""
-    sshpass -p "1" ssh -o StrictHostKeyChecking=no user@"$master_ip" "cd $HOME/ceremonyclient/node && $master_command"
+    sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "cd $HOME/ceremonyclient/node && $master_command"
     if [ $? -eq 0 ]; then
       echo -e "🟢 ${GREEN} Commande pour le ${BOLD}Master${RESET} envoyée avec succès sur${RESET} $master_ip."
     else
@@ -294,7 +296,8 @@ elif [[ "$choice" == "3" ]]; then
     slaves_ips+=("$slave_ip")
   done
 
-    read -p "Entrez un nom de configuration : " name_file
+    read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe connexion SSH : " password
+    read -p "\nEntrez un nom de configuration : " name_file
 
   cluster_config+="\n  ]  # Generate from Quil - Cluster Tools"
 
