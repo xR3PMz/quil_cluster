@@ -22,10 +22,10 @@ echo "  ██╔══██║██╔══██║╚════██║
 echo -e "  ██║  ██║██║  ██║███████║██║  ██║██║  ██║██║ "
 echo -e "  ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝ "
 echo ""
-echo -e "${CYAN}                  MINING TOOLS                  ${RESET}"
-echo -e "${ITALIC}${BOLD}              WWW.ADVANCED-HASH.AI              ${RESET}${RESET}"
+echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
+echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e " ${BOLD}             Quil - Cluster Tools               ${RESET}"
+echo -e " ${BOLD}      QUIL - Cluster Tools ${RED}${ITALIC}(BETA v0.1)      ${RESET}"
 echo ""
 
 
@@ -55,7 +55,7 @@ update_remote_config() {
   temp_config="/tmp/remote_config_$ip.yml"
   echo -e "$cluster_config" > "$temp_config"
 
-  echo -e "${CYAN}Mise à jour de la configuration sur ${BOLD} $ip${RESET}...${RESET}"
+  echo -e "${CYAN}Mise à jour de la configuration sur ${BOLD} $ip...${RESET}${RESET}"
   sshpass -p "1" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
 
   SSH_COMMAND="
@@ -174,16 +174,16 @@ generate_start_commands() {
 
 # Menu principal
 echo -e ""
-echo -e "----- ${CYAN}${BOLD}Menu principal :${RESET}${RESET} -----"
+echo -e "---------- ${CYAN}${BOLD}MENU PRINCIPAL${RESET}${RESET} ----------"
 echo -e ""
 echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster${RESET}"
 echo -e "${BOLD}2.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET}"
-
+echo ""
 read -p "Veuillez choisir une option (1 ou 2) : " choice
 
 if [[ "$choice" == "1" ]]; then
   echo -e ""
-  echo -e "${CYAN}--- ${BOLD}Démarrer un cluster${RESET} ---${RESET}"
+  echo -e "--- ${CYAN}${BOLD}DEMARRER UN CLUSTER${RESET} ---"
   echo -e ""
 
   read -p "Entrez l'adresse IP locale du master (ex: 192.168.1.20) : " master_ip
@@ -204,7 +204,7 @@ if [[ "$choice" == "1" ]]; then
 
 elif [[ "$choice" == "2" ]]; then
   echo -e ""
-  echo -e "${CYAN}--- ${BOLD}Configurer un cluster${RESET} ---${RESET}"
+  echo -e "--- ${CYAN}${BOLD}CONFIGURER UN NOUVEAU CLUSTER${RESET} ---"
   echo -e ""
 
   read -p "Entrez l'adresse IP locale du master (ex: 192.168.1.20) : " master_ip
@@ -234,7 +234,7 @@ elif [[ "$choice" == "2" ]]; then
     slaves_ips+=("$slave_ip")
   done
 
-  cluster_config+="\n  ]  # zeub"
+  cluster_config+="\n  ]  # Generate from Quil - Cluster Tools"
 
   echo -e "\n${ORANGE}${BOLD}Configuration générée pour le cluster :${RESET}${RESET}"
   echo -e "$cluster_config"
