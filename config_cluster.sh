@@ -28,8 +28,6 @@ echo ""
 echo -e " ${BOLD}      QUIL - Cluster Tools ${RED}${ITALIC}(BETA v0.1) 🛠️      ${RESET}"
 echo ""
 
-
-# Chemin du fichier de configuration à modifier
 CONFIG_PATH="/home/user/ceremonyclient/node/.config/config.yml"
 
 generate_data_worker_multiaddrs() {
@@ -55,7 +53,7 @@ update_remote_config() {
   temp_config="/tmp/remote_config_$ip.yml"
   echo -e "$cluster_config" > "$temp_config"
 
-  echo -e "⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
+  echo -e "\n⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
   sshpass -p "1" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
 
   SSH_COMMAND="
@@ -67,10 +65,10 @@ update_remote_config() {
 
   if [ $? -eq 0 ]; then
     echo -e ""
-    echo -e "✅ ${GREEN} Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}${RESET}"
+    echo -e "✅ Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}"
   else
     echo -e ""
-    echo -e "❌ ${RED} Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}${RESET}"
+    echo -e "❌ Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}"
   fi
 
   sudo rm -f "$temp_config"
@@ -90,13 +88,12 @@ check_rigs_accessible() {
   done
 }
 
-# Fonction corrigée pour suggérer les commandes de démarrage
 generate_suggested_commands() {
   local master_threads=$1
   local master_ip=$2
   local slaves_ips=("${@:3}")
   
-  echo -e "\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
+  echo -e "\n\n\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
   echo -e ""
   # Commande pour le master
   echo -e "${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) :"
@@ -112,8 +109,7 @@ generate_suggested_commands() {
     # Mise à jour pour le prochain slave
     previous_threads=$((previous_threads + master_threads))
   done
-  echo -e ""
-  echo -e "--- ${BOLD}Fin des commandes suggérées${RESET} ---"
+
 }
 
 generate_start_commands() {
@@ -135,7 +131,7 @@ generate_start_commands() {
     slave_threads=$((slave_threads + threads))
   done
 
-  echo -e "\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
+  echo -e "\n\n\nℹ️ ${GREEN}${BOLD} Les commandes à exécuter pour démarrer le cluster :${RESET}${RESET}"
   echo -e "\n${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) : $master_command"
   for i in "${!slaves_ips[@]}"; do
     echo -e "${YELLOW}Slave${RESET} (${slaves_ips[$i]}) : ${slave_commands[$i]}"
@@ -175,18 +171,81 @@ generate_start_commands() {
   fi
 }
 
+save_cluster_configuration() {
+  local filename=$1
+  local master_ip=$2
+  local master_threads=$3
+  shift 3
+  local slaves_ips=("$@")
+
+  # Début du contenu JSON
+  local json_content="{\n"
+  json_content+="  \"master_ip\": \"$master_ip\",\n"
+  json_content+="  \"master_threads\": $master_threads,\n"
+  json_content+="  \"slaves\": [\n"
+
+  # Ajouter les IP des esclaves avec une virgule entre les éléments si plusieurs
+  for i in "${!slaves_ips[@]}"; do
+    # Si ce n'est pas la dernière IP, on ajoute une virgule
+    if [ $i -lt $((${#slaves_ips[@]} - 1)) ]; then
+      json_content+="    \"${slaves_ips[$i]}\",\n"
+    else
+      json_content+="    \"${slaves_ips[$i]}\"\n"
+    fi
+  done
+
+  # Fin du contenu JSON
+  json_content+="  ]\n"
+  json_content+="}"
+
+  # Sauvegarder dans un fichier
+  echo -e "$json_content" > "$filename"
+  echo -e "\n\n\n📁 Configuration sauvegardée dans le fichier : ${YELLOW}${BOLD}$filename${RESET} \n"
+}
+
+start_cluster_from_file() {
+  read -p "Entrez le chemin du fichier de configuration (ex: /path/to/cluster.json) : " config_file
+
+  if [ ! -f "$config_file" ]; then
+    echo -e "\n❌ ${RED}Fichier non trouvé : ${BOLD}$config_file${RESET}"
+    exit 1
+  fi
+
+  # Validation JSON
+  if ! jq empty "$config_file" &>/dev/null; then
+    echo -e "\n❌ ${RED}Le fichier JSON est invalide. Veuillez vérifier sa syntaxe.${RESET}"
+    exit 1
+  fi
+
+  master_ip=$(jq -r '.master_ip' "$config_file")
+  master_threads=$(jq -r '.master_threads' "$config_file")
+  
+  slaves_ips=()
+  while IFS= read -r slave; do
+    slaves_ips+=("$slave")
+  done < <(jq -r '.slaves[]' "$config_file")
+
+  echo -e "\n📄 Chargement de la configuration :"
+  echo -e "   Master IP: $master_ip"
+  echo -e "   Threads Master: $master_threads"
+  echo -e "   Slaves: ${slaves_ips[*]}"
+
+  generate_start_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
+}
+
 # Menu principal
 echo -e ""
 echo -e "---------- ${CYAN}${BOLD}MENU PRINCIPAL${RESET}${RESET} ----------"
 echo -e ""
-echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster${RESET} ⚡"
-echo -e "${BOLD}2.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET} 🔧"
+echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster manuellement${RESET} ⚡"
+echo -e "${BOLD}2.${RESET} ${YELLOW}Démarrer un cluster depuis un fichier de sauvegarde${RESET} 📄"
+echo -e "${BOLD}3.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET} 🔧"
 echo ""
-read -p "Veuillez choisir une option (1 ou 2) : " choice
+read -p "Veuillez choisir une option (1, 2 ou 3) : " choice
 
 if [[ "$choice" == "1" ]]; then
-  echo -e ""
-  echo -e "--- ${CYAN}${BOLD}DEMARRER UN CLUSTER${RESET} ---"
+
+  echo -e "\n--- ${CYAN}${BOLD}DEMARRER UN CLUSTER${RESET} ---"
   echo -e ""
 
   read -p "Entrez l'adresse IP locale du master (ex: 192.168.1.20) : " master_ip
@@ -206,6 +265,10 @@ if [[ "$choice" == "1" ]]; then
   generate_start_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
 
 elif [[ "$choice" == "2" ]]; then
+    echo -e "\n--- ${CYAN}${BOLD}DEMARRER UN CLUSTER${RESET} ---"
+    start_cluster_from_file
+
+elif [[ "$choice" == "3" ]]; then
   echo -e "\n--- ${CYAN}${BOLD}CONFIGURER UN NOUVEAU CLUSTER${RESET} ---"
   echo -e ""
 
@@ -236,6 +299,8 @@ elif [[ "$choice" == "2" ]]; then
     slaves_ips+=("$slave_ip")
   done
 
+    read -p "Entrez un nom de configuration : " name_file
+
   cluster_config+="\n  ]  # Generate from Quil - Cluster Tools"
 
   echo -e "\nℹ️ ${ORANGE}${BOLD} Configuration générée pour le cluster :${RESET}${RESET}"
@@ -252,6 +317,9 @@ elif [[ "$choice" == "2" ]]; then
   done
 
   generate_suggested_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
+
+  config_file="${master_ip##*.}-${master_threads}-${name_file}.json"
+  save_cluster_configuration "$config_file" "$master_ip" "$master_threads" "${slaves_ips[@]}"
 
 else
   echo -e "❌ ${RED} Choix invalide. Fermeture du script.${RESET}"
