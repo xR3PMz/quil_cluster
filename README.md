@@ -21,9 +21,11 @@
   
 1. Vous devez installer sshpass et le para.sh dans le répertoire de chaque node.
    
-    `sudo apt update && sudo apt install sshpass`
+   `sudo apt update && sudo apt install sshpass`
    
-    `cd /home/user/ceremonyclient/node/ && wget https://advanced-hash.ai/downloads/para.sh && chmod +x para.sh`
+   HiveOS: `cd /home/user/ceremonyclient/node/ && wget https://advanced-hash.ai/downloads/para.sh && chmod +x para.sh`
+
+   Linux: `cd $HOME/ceremonyclient/node/ && wget https://advanced-hash.ai/downloads/para.sh && chmod +x para.sh`
 
 3. 
 
@@ -42,7 +44,7 @@
   Pour vos nodes sous Linux:
     
       sudo apt update && sudo apt install sshpass jq
-      cd /home/user/ceremonyclient/node/
+      cd $HOME/ceremonyclient/node/
       wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh
       chmod +x config_cluster_linux.sh
       wget https://advanced-hash.ai/downloads/para.sh
@@ -54,14 +56,16 @@
   Pour vos nodes sous HiveOS:
     
       sudo apt update && sudo apt install sshpass jq
-      
+      cd /home/user/ceremonyclient/node/
       wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh && chmod +x config_cluster_hiveOS.sh
+      ./config_cluster_hiveOS.sh
       
   Pour vos nodes sous Linux:
     
       sudo apt update && sudo apt install sshpass jq
-      
+      cd $HOME/ceremonyclient/node/
       wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh && chmod +x config_cluster_linux.sh
+      ./config_cluster_linux.sh
 
 3. Pour executer l'outil: 
 
