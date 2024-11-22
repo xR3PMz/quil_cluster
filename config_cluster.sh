@@ -178,15 +178,12 @@ save_cluster_configuration() {
   shift 3
   local slaves_ips=("$@")
 
-  # Début du contenu JSON
   local json_content="{\n"
   json_content+="  \"master_ip\": \"$master_ip\",\n"
   json_content+="  \"master_threads\": $master_threads,\n"
   json_content+="  \"slaves\": [\n"
 
-  # Ajouter les IP des esclaves avec une virgule entre les éléments si plusieurs
   for i in "${!slaves_ips[@]}"; do
-    # Si ce n'est pas la dernière IP, on ajoute une virgule
     if [ $i -lt $((${#slaves_ips[@]} - 1)) ]; then
       json_content+="    \"${slaves_ips[$i]}\",\n"
     else
@@ -194,7 +191,6 @@ save_cluster_configuration() {
     fi
   done
 
-  # Fin du contenu JSON
   json_content+="  ]\n"
   json_content+="}"
 
@@ -211,7 +207,6 @@ start_cluster_from_file() {
     exit 1
   fi
 
-  # Validation JSON
   if ! jq empty "$config_file" &>/dev/null; then
     echo -e "\n❌ ${RED}Le fichier JSON est invalide. Veuillez vérifier sa syntaxe.${RESET}"
     exit 1
