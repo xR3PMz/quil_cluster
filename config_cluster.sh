@@ -254,5 +254,5 @@ elif [[ "$choice" == "2" ]]; then
   generate_suggested_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
 
 else
-  echo -e "❌ ${RED} Choix invalide. Le script va maintenant se terminer.${RESET}"
+  echo -e "❌ ${RED} Choix invalide. Fermeture du script.${RESET}"
 fi
