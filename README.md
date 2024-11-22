@@ -15,7 +15,7 @@
 - Fonctionnement:
   
     Le but est de configurer vos clusters et les démarrer à distance depuis n'importe quel poste sur le même réseau local.
-    Pour le moment cet outil ne peux configurer et executer que des nodes fonctionnant depuis HiveOS et Linux (installé dans le répertoire /home/user/ceremonyclient/node)
+    Pour le moment cet outil ne peux configurer et executer que des nodes fonctionnant depuis HiveOS ou Linux (installé dans le répertoire /home/user/ceremonyclient/node)
 
 - Tutoriel:
   
@@ -72,6 +72,7 @@
     `./config_cluster_hiveOS.sh`
 
 Attention, si vous avez déjà éditer vos config.yml veillez à ce qu'il n'y est pas de configuration existante.
+Pensez à bien utiliser la version utilisé par vos nodes. (Faire une configuration mixte sur des nodes Ubuntu/HiveOS n'est pour le moment pas possible)
 Vos nodes doivent être démarré, minage Quil arrêté! (logique vous m'direz!)
 Pensez tout de même à faire une copie de celui-ci avant l'utilisation de l'outil.
 
