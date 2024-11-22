@@ -22,6 +22,7 @@
 1. Vous devez installer sshpass et le para.sh dans le répertoire de chaque node.
    
     `sudo apt update && sudo apt install sshpass`
+   
     `cd /home/user/ceremonyclient/node/ && wget https://advanced-hash.ai/downloads/para.sh && chmod +x para.sh`
 
 3. 
