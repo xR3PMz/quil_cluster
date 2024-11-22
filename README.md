@@ -1,3 +1,5 @@
+- Téléchargement: https://github.com/xR3PMz/quil_cluster/releases/tag/cluster_config
+
 - Compatible:
   
     Windows (installer WLS/Git bash)
