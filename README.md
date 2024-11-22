@@ -53,10 +53,12 @@ B. Si vous souhaitez executer l'outil depuis un autre poste (qui n'est pas un no
 
   Pour vos nodes sous HiveOS:
     `sudo apt update && sudo apt install sshpass jq`
+    
     `wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_hiveOS.sh && chmod +x config_cluster_hiveOS.sh`
     
   Pour vos nodes sous Linux:
     `sudo apt update && sudo apt install sshpass jq`
+    
     `wget https://github.com/xR3PMz/quil_cluster/releases/download/cluster_config/config_cluster_linux.sh && chmod +x config_cluster_linux.sh`
 
 3. Pour executer l'outil: 
