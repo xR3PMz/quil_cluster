@@ -267,57 +267,63 @@ data_worker_cluster() {
         fi
     elif [[ "$method_choice" == "2" ]]; then
 
-        read -p "Entrez le chemin complet du fichier de sauvegarde (.json) : " backup_file
-        if [[ -f "$backup_file" ]]; then
+    read -p "Entrez le chemin complet du fichier de sauvegarde (.json) : " backup_file
+    if [[ -f "$backup_file" ]]; then
 
-            echo -e "\n✅ ${GREEN}Fichier de sauvegarde trouvé, récupération des informations...${RESET}"
+        echo -e "\n✅ ${GREEN}Fichier de sauvegarde trouvé, récupération des informations...${RESET}"
+        echo ""
+
+        master_ip=$(jq -r '.master_ip' "$backup_file")
+        master_threads=$(jq -r '.master_threads' "$backup_file")
+        slave_ips=$(jq -r '.slaves[]' "$backup_file")
+
+        # Calculer le nombre d'IP uniques parmi les slaves
+        unique_slave_count=$(echo "$slave_ips" | sort | uniq | wc -l)
+
+        # Recalculer master_threads en incluant le master lui-même
+        total_threads=$((master_threads * (unique_slave_count + 1)))
+
+        if [[ "$master_ip" != "null" && "$master_threads" -gt 0 ]]; then
+
+            read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
+            echo ""
+            echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
             echo ""
 
-            master_ip=$(jq -r '.master_ip' "$backup_file")
-            master_threads=$(jq -r '.master_threads' "$backup_file")
+            SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
+            output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
             
-            if [[ "$master_ip" != "null" && "$master_threads" != "null" ]]; then
+            if [[ $? -eq 0 ]]; then
+                echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
 
-                read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
-                echo ""
-                echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
-                echo ""
-
-                SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
-                output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
+                peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
+                prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
+                active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
+                owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
                 
-                if [[ $? -eq 0 ]]; then
-                    echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
-
-                    peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
-                    prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
-                    active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
-                    owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
-                    
-                    echo ""
-                    echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
-                    echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
-                    
-                    if [[ $(($master_threads - $active_workers)) -ge 2 ]]; then
-                        base_workers=$(($master_threads - 1))
-                        echo -e "${CYAN}Workers:${RESET} ${RED}${BOLD}$active_workers${RESET}"
-                        echo -e "❌ Vous avez un ou plusieurs slaves arrêtés, vous devriez avoir ${RED}${BOLD}$base_workers workers${RESET}."
-                        echo ""
-                    else
-                        echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
-                    fi
-                    
-                    echo -e "${CYAN}Wallet:${RESET} ${BOLD}$owned_balance${RESET}"
-                    echo ""
+                echo ""
+                echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
+                echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
+                
+                if [[ $(($total_threads - $active_workers)) -ge 2 ]]; then
+                    base_workers=$(($total_threads - 1))
+                    echo -e "${CYAN}Workers:${RESET} ❌ ${RED}${BOLD}$active_workers${RESET} workers en ligne au lieu de ${GREEN}${BOLD}$base_workers${RESET}. (Slaves Hors-ligne)"
                 else
-                    echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+                    echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
                 fi
+                
+                echo -e "${CYAN}Wallet:${RESET} ${BOLD}$owned_balance${RESET}"
+                echo ""
             else
-                echo -e "❌ ${RED}Erreur : IP du master ou master_threads introuvables dans le fichier JSON.${RESET}"
+                echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
             fi
         else
-            echo -e "❌ ${RED}Erreur : Fichier de sauvegarde introuvable. Veuillez vérifier le chemin.${RESET}"
+            echo -e "❌ ${RED}Erreur : IP du master ou master_threads introuvables ou invalides dans le fichier JSON.${RESET}"
         fi
+    else
+        echo -e "❌ ${RED}Erreur : Fichier de sauvegarde introuvable. Veuillez vérifier le chemin.${RESET}"
+    fi
+
     else
         echo -e "❌ ${RED}Option non valide. Retour au menu principal.${RESET}"
     fi
