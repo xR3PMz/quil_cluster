@@ -98,7 +98,7 @@ generate_suggested_commands() {
   echo -e ""
   # Commande pour le master
   echo -e "${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) :"
-  echo "screen -dmS quil bash para.sh linux amd64 0 $master_threads 2.0.4"
+  echo "screen -dmS quil bash para.sh linux amd64 0 $master_threads"
 
   # Commandes pour les slaves
   local previous_threads=$((master_threads - 1)) # Threads pour le premier slave
@@ -106,7 +106,7 @@ generate_suggested_commands() {
     local slave_ip="${slaves_ips[$i]}"
     echo -e ""
     echo -e "${YELLOW}Slave${RESET} ($slave_ip) :"
-    echo "screen -dmS quil bash para.sh linux amd64 $previous_threads $master_threads 2.0.4"
+    echo "screen -dmS quil bash para.sh linux amd64 $previous_threads $master_threads"
     # Mise à jour pour le prochain slave
     previous_threads=$((previous_threads + master_threads))
   done
@@ -118,7 +118,7 @@ generate_start_commands() {
   local master_ip=$2
   local slaves_ips=("${@:3}")
 
-  master_command="screen -dmS quil bash para.sh linux amd64 0 $threads 2.0.4"
+  master_command="screen -dmS quil bash para.sh linux amd64 0 $threads"
   
   slave_commands=()
   slave_idx=1
@@ -126,7 +126,7 @@ generate_start_commands() {
   
   for ip in "${slaves_ips[@]}"; do
     # Calculer les threads pour chaque slave
-    slave_command="screen -dmS quil bash para.sh linux amd64 $slave_threads $threads 2.0.4"
+    slave_command="screen -dmS quil bash para.sh linux amd64 $slave_threads $threads"
     slave_commands+=("$slave_command")
     # Mise à jour du nombre de threads pour le prochain slave
     slave_threads=$((slave_threads + threads))
