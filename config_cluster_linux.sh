@@ -25,7 +25,7 @@ echo ""
 echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
 echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e " ${BOLD}    QUIL - Cluster Tools ${RED}${ITALIC}(Linux BETA v0.1) 🛠️    ${RESET}"
+echo -e " ${BOLD}   QUIL - Cluster Tools ${RED}${ITALIC}(Linux BETA v0.1.1) 🛠️   ${RESET}"
 echo ""
 
 CONFIG_PATH="$HOME/ceremonyclient/node/.config/config.yml"
@@ -54,14 +54,15 @@ update_remote_config() {
   echo -e "$cluster_config" > "$temp_config"
 
   echo -e "\n⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
-  sshpass -p "$password" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
+
+  sshpass -p "$password" scp -o StrictHostKeyChecking=no "$temp_config" "$session_"@$ip:/tmp/cluster_config.yml
 
   SSH_COMMAND="
-    sudo sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH &&
-    sudo rm /tmp/cluster_config.yml
+    sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH &&
+    rm /tmp/cluster_config.yml
   "
 
-  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+  sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$session_"@$ip "$SSH_COMMAND"
 
   if [ $? -eq 0 ]; then
     echo -e ""
@@ -71,7 +72,7 @@ update_remote_config() {
     echo -e "❌ Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}"
   fi
 
-  sudo rm -f "$temp_config"
+  rm -f "$temp_config"
 }
 
 check_rigs_accessible() {
@@ -97,7 +98,7 @@ generate_suggested_commands() {
   echo -e ""
   # Commande pour le master
   echo -e "${ORANGE}${BOLD}Master${RESET}${RESET} ($master_ip) :"
-  echo "sudo screen -dmS quil bash para.sh linux amd64 0 $master_threads 2.0.4"
+  echo "screen -dmS quil bash para.sh linux amd64 0 $master_threads 2.0.4"
 
   # Commandes pour les slaves
   local previous_threads=$((master_threads - 1)) # Threads pour le premier slave
@@ -105,7 +106,7 @@ generate_suggested_commands() {
     local slave_ip="${slaves_ips[$i]}"
     echo -e ""
     echo -e "${YELLOW}Slave${RESET} ($slave_ip) :"
-    echo "sudo screen -dmS quil bash para.sh linux amd64 $previous_threads $master_threads 2.0.4"
+    echo "screen -dmS quil bash para.sh linux amd64 $previous_threads $master_threads 2.0.4"
     # Mise à jour pour le prochain slave
     previous_threads=$((previous_threads + master_threads))
   done
@@ -117,7 +118,7 @@ generate_start_commands() {
   local master_ip=$2
   local slaves_ips=("${@:3}")
 
-  master_command="sudo screen -dmS quil bash para.sh linux amd64 0 $threads 2.0.4"
+  master_command="screen -dmS quil bash para.sh linux amd64 0 $threads 2.0.4"
   
   slave_commands=()
   slave_idx=1
@@ -125,7 +126,7 @@ generate_start_commands() {
   
   for ip in "${slaves_ips[@]}"; do
     # Calculer les threads pour chaque slave
-    slave_command="sudo screen -dmS quil bash para.sh linux amd64 $slave_threads $threads 2.0.4"
+    slave_command="screen -dmS quil bash para.sh linux amd64 $slave_threads $threads 2.0.4"
     slave_commands+=("$slave_command")
     # Mise à jour du nombre de threads pour le prochain slave
     slave_threads=$((slave_threads + threads))
@@ -139,15 +140,18 @@ generate_start_commands() {
   
   read -p "Voulez-vous exécuter ces commandes sur les nodes distants ? (y/n) : " confirm
   if [[ "$confirm" == "y" ]]; then
-  echo -e "\n "
-  read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe connexion SSH : " password
+  echo ""
+  read -p "Entrez le nom d'utilisateur de vos machines: " session_
+  echo ""
+  read -sp "Votre mot de passe connexion à la session: " password
+  echo ""
     for i in "${!slave_commands[@]}"; do
       slave_ip="${slaves_ips[$i]}"
       slave_command="${slave_commands[$i]}"
       echo ""
       echo -e "🟡 ${YELLOW}Exécution de la commande pour le slave sur ${BOLD}$slave_ip...${RESET}"
       echo ""
-      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$slave_ip" "cd $HOME/ceremonyclient/node && $slave_command"
+      sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$session_"@"$slave_ip" "cd $HOME/ceremonyclient/node && $slave_command"
       if [ $? -eq 0 ]; then
         echo -e "🟢 ${GREEN} Commande pour le slave envoyée avec succès sur${RESET} $slave_ip."
       else
@@ -160,7 +164,7 @@ generate_start_commands() {
     echo ""
     echo -e "🟡 ${YELLOW} Exécution de la commande pour le master sur ${BOLD}$master_ip...${RESET}"
     echo ""
-    sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "cd $HOME/ceremonyclient/node && $master_command"
+    sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$session_"@"$master_ip" "cd $HOME/ceremonyclient/node && $master_command"
     if [ $? -eq 0 ]; then
       echo -e "🟢 ${GREEN} Commande pour le ${BOLD}Master${RESET} envoyée avec succès sur${RESET} $master_ip."
     else
@@ -296,8 +300,12 @@ elif [[ "$choice" == "3" ]]; then
     slaves_ips+=("$slave_ip")
   done
 
-    read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe connexion SSH : " password
-    read -p "\nEntrez un nom de configuration : " name_file
+    echo ""
+    read -p "Entrez le nom d'utilisateur de vos machines: " session_
+    echo ""
+    read -sp "Votre mot de passe connexion à la session: " password
+    echo ""
+    read -p "Entrez un nom de configuration : " name_file
 
   cluster_config+="\n  ]  # Generate from Quil - Cluster Tools"
 
