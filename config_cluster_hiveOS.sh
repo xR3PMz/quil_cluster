@@ -25,7 +25,7 @@ echo ""
 echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
 echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e " ${BOLD}   QUIL - Cluster Tools ${RED}${ITALIC}(HiveOS BETA v0.1) 🛠️   ${RESET}"
+echo -e "${BOLD}  QUIL - Cluster Tools ${RED}${ITALIC}(HiveOS BETA v0.1) 🛠️   ${RESET}"
 echo ""
 
 CONFIG_PATH="/home/user/ceremonyclient/node/.config/config.yml"
@@ -229,6 +229,100 @@ start_cluster_from_file() {
   generate_start_commands "$master_threads" "$master_ip" "${slaves_ips[@]}"
 }
 
+data_worker_cluster() {
+    echo -e "\n--- ${CYAN}${BOLD}RECUPERER LES INFORMATIONS D'UN CLUSTER/NODE${RESET} ---"
+    echo ""
+    echo -e "${BOLD}1.${RESET}${YELLOW} Récupérer les informations via adresse IP${RESET} 📡"
+    echo -e "${BOLD}2.${RESET}${YELLOW} Récupérer les informations depuis un fichier de sauvegarde${RESET} 📄"
+    echo ""
+    read -p "Veuillez choisir une option (1 ou 2) : " method_choice
+    echo ""
+    if [[ "$method_choice" == "1" ]]; then
+        
+        echo -e "\n--- ${CYAN}${BOLD}AFFICHER LA BALANCE QUIL${RESET} ---"
+        read -p "Entrez l'adresse IP du master (ex: 192.168.1.20) : " master_ip
+        read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
+        echo ""
+        echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
+        
+        SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
+        output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
+        
+        if [[ $? -eq 0 ]]; then
+            echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
+            
+            peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
+            prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
+            active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
+            owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
+
+            echo ""
+            echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
+            echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
+            echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
+            echo -e "${CYAN}Balance:${RESET} ${BOLD}$owned_balance${RESET}"
+            echo ""
+        else
+            echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+        fi
+    elif [[ "$method_choice" == "2" ]]; then
+
+        read -p "Entrez le chemin complet du fichier de sauvegarde (.json) : " backup_file
+        if [[ -f "$backup_file" ]]; then
+
+            echo -e "\n✅ ${GREEN}Fichier de sauvegarde trouvé, récupération des informations...${RESET}"
+            echo ""
+
+            master_ip=$(jq -r '.master_ip' "$backup_file")
+            master_threads=$(jq -r '.master_threads' "$backup_file")
+            
+            if [[ "$master_ip" != "null" && "$master_threads" != "null" ]]; then
+
+                read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
+                echo ""
+                echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
+                echo ""
+
+                SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
+                output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
+                
+                if [[ $? -eq 0 ]]; then
+                    echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
+
+                    peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
+                    prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
+                    active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
+                    owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
+                    
+                    echo ""
+                    echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
+                    echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
+                    
+                    if [[ $(($master_threads - $active_workers)) -ge 2 ]]; then
+                        base_workers=$(($master_threads - 1))
+                        echo -e "${CYAN}Workers:${RESET} ${RED}${BOLD}$active_workers${RESET}"
+                        echo -e "❌ Vous avez un ou plusieurs slaves arrêtés, vous devriez avoir ${RED}${BOLD}$base_workers workers${RESET}."
+                        echo ""
+                    else
+                        echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
+                    fi
+                    
+                    echo -e "${CYAN}Wallet:${RESET} ${BOLD}$owned_balance${RESET}"
+                    echo ""
+                else
+                    echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+                fi
+            else
+                echo -e "❌ ${RED}Erreur : IP du master ou master_threads introuvables dans le fichier JSON.${RESET}"
+            fi
+        else
+            echo -e "❌ ${RED}Erreur : Fichier de sauvegarde introuvable. Veuillez vérifier le chemin.${RESET}"
+        fi
+    else
+        echo -e "❌ ${RED}Option non valide. Retour au menu principal.${RESET}"
+    fi
+}
+
 # Menu principal
 echo -e ""
 echo -e "---------- ${CYAN}${BOLD}MENU PRINCIPAL${RESET}${RESET} ----------"
@@ -236,8 +330,9 @@ echo -e ""
 echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster manuellement${RESET} ⚡"
 echo -e "${BOLD}2.${RESET} ${YELLOW}Démarrer un cluster depuis un fichier de sauvegarde${RESET} 📄"
 echo -e "${BOLD}3.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET} 🔧"
+echo -e "${BOLD}4.${RESET} ${YELLOW}Récupérer les informations d'un cluster/node (Balance/Workers etc..)${RESET} 💰"
 echo ""
-read -p "Veuillez choisir une option (1, 2 ou 3) : " choice
+read -p "Veuillez choisir une option (1, 2, 3 ou 4) : " choice
 
 if [[ "$choice" == "1" ]]; then
 
@@ -320,6 +415,9 @@ elif [[ "$choice" == "3" ]]; then
 
   config_file="${master_ip##*.}-${master_threads}-${name_file}.json"
   save_cluster_configuration "$config_file" "$master_ip" "$master_threads" "${slaves_ips[@]}"
+
+  elif [[ "$choice" == "4" ]]; then
+    data_worker_cluster
 
 else
   echo -e "❌ ${RED} Choix invalide. Fermeture du script.${RESET}"
