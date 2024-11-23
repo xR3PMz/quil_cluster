@@ -288,7 +288,6 @@ data_worker_cluster() {
             read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
             echo ""
             echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
-            echo ""
 
             SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
             output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
