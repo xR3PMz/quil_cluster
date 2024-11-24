@@ -2,6 +2,7 @@
 
 DIR_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
+
 running_process=$(ps -ef | grep "[n]ode-" | grep "$DIR_PATH" | awk '{print $2}')
 if [ ! -z "$running_process" ]; then
   echo "A previous instance is running. Stopping it..."

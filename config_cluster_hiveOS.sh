@@ -30,50 +30,6 @@ echo ""
 
 CONFIG_PATH="/home/user/ceremonyclient/node/.config/config.yml"
 
-generate_data_worker_multiaddrs() {
-  local ip=$1
-  local threads=$2
-  local start_port=40001
-  local ports=()
-
-  if [[ $is_master == "true" ]]; then
-    threads=$((threads - 1))
-  fi
-
-  for ((i=0; i<threads; i++)); do
-    ports+=("'/ip4/$ip/tcp/$((start_port + i))'")
-  done
-
-  echo "${ports[@]}"
-}
-
-update_remote_config() {
-  local ip=$1
-
-  temp_config="/tmp/remote_config_$ip.yml"
-  echo -e "$cluster_config" > "$temp_config"
-
-  echo -e "\n⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
-  sshpass -p "$password" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
-
-  SSH_COMMAND="
-    sudo sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH &&
-    sudo rm /tmp/cluster_config.yml
-  "
-
-  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
-
-  if [ $? -eq 0 ]; then
-    echo -e ""
-    echo -e "✅ Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}"
-  else
-    echo -e ""
-    echo -e "❌ Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}"
-  fi
-
-  sudo rm -f "$temp_config"
-}
-
 check_rigs_accessible() {
   local rigs=("${@}")
   for rig in "${rigs[@]}"; do
@@ -238,33 +194,53 @@ data_worker_cluster() {
     read -p "Veuillez choisir une option (1 ou 2) : " method_choice
     echo ""
     if [[ "$method_choice" == "1" ]]; then
-        
+            
         echo -e "\n--- ${CYAN}${BOLD}AFFICHER LA BALANCE QUIL${RESET} ---"
         read -p "Entrez l'adresse IP du master (ex: 192.168.1.20) : " master_ip
         read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
         echo ""
         echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
-        
-        SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
-        output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
-        
-        if [[ $? -eq 0 ]]; then
-            echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
-            
-            peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
-            prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
-            active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
-            owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
 
-            echo ""
-            echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
-            echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
-            echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
-            echo -e "${CYAN}Balance:${RESET} ${BOLD}$owned_balance${RESET}"
-            echo ""
+        # Définir le répertoire où se trouvent les fichiers node
+        DIR_PATH="/home/user/ceremonyclient/node"
+        
+        # Récupérer le nom du fichier le plus récent
+        latest_node=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "ls -v $DIR_PATH/node-*-linux-amd64 2>/dev/null | tail -n 1")
+        
+        # Vérifier si la récupération de la version a réussi
+        if [[ -n "$latest_node" ]]; then
+            # Extraire la version du nom du fichier
+            version=$(basename "$latest_node" | awk -F'[-]' '{print $2}')
+            
+            # Construire la commande SSH pour exécuter le node avec la version dynamique
+            SSH_COMMAND="cd $DIR_PATH && sudo ./node-$version-linux-amd64 -node-info"
+            
+            # Exécuter la commande SSH
+            output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
+            
+            # Vérifier si la commande SSH a réussi
+            if [[ $? -eq 0 ]]; then
+                echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
+                
+                peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
+                prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
+                active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
+                owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
+                
+                echo ""
+                echo -e "${CYAN}Version node:${RESET} ${BOLD}$version${RESET}"
+                echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
+                echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
+                echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
+                echo -e "${CYAN}Balance:${RESET} ${BOLD}$owned_balance${RESET}"
+                echo ""
+            else
+                echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+            fi
         else
-            echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+            echo -e "❌ ${RED}Erreur : Impossible de trouver le fichier node sur le master.${RESET}"
         fi
+
     elif [[ "$method_choice" == "2" ]]; then
 
     read -p "Entrez le chemin complet du fichier de sauvegarde (.json) : " backup_file
@@ -289,32 +265,49 @@ data_worker_cluster() {
             echo ""
             echo -e "\n⏳ Connexion au master ${BOLD}$master_ip${RESET} et exécution de la commande..."
 
-            SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-2.0.4-linux-amd64 -node-info"
-            output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
-            
-            if [[ $? -eq 0 ]]; then
-                echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
+            # Récupérer la dernière version du node sur le master
+            latest_node=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "ls -v /home/user/ceremonyclient/node/node-*-linux-amd64 2>/dev/null | tail -n 1")
 
-                peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
-                prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
-                active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
-                owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
+            # Vérifier si la récupération de la version a réussi
+            if [[ -n "$latest_node" ]]; then
+                # Extraire la version du nom du fichier
+                version=$(basename "$latest_node" | awk -F'[-]' '{print $2}')
                 
-                echo ""
-                echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
-                echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
                 
-                if [[ $(($total_threads - $active_workers)) -ge 2 ]]; then
-                    base_workers=$(($total_threads - 1))
-                    echo -e "${CYAN}Workers:${RESET} ❌ ${RED}${BOLD}$active_workers${RESET} workers en ligne au lieu de ${GREEN}${BOLD}$base_workers${RESET}. (Slaves Hors-ligne)"
+                # Construire la commande SSH pour exécuter le node avec la version dynamique
+                SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo ./node-$version-linux-amd64 -node-info"
+                
+                # Exécuter la commande SSH
+                output=$(sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@"$master_ip" "$SSH_COMMAND" 2>/dev/null)
+                
+                # Vérifier si la commande SSH a réussi
+                if [[ $? -eq 0 ]]; then
+                    echo -e "\n✅ ${GREEN}Balance récupérée avec succès :${RESET}"
+
+                    peer_id=$(echo "$output" | grep "Peer ID" | awk -F": " '{print $2}')
+                    prover_ring=$(echo "$output" | grep "Prover Ring" | awk -F": " '{print $2}')
+                    active_workers=$(echo "$output" | grep "Active Workers" | awk -F": " '{print $2}')
+                    owned_balance=$(echo "$output" | grep "Owned balance" | awk -F": " '{print $2}')
+                    
+                    echo ""
+                    echo -e "${CYAN}Version node:${RESET} ${BOLD}$version${RESET}"
+                    echo -e "${CYAN}ID:${RESET} ${BOLD}$peer_id${RESET}"
+                    echo -e "${CYAN}Ring:${RESET} ${BOLD}$prover_ring${RESET}"
+                    
+                    if [[ $(($total_threads - $active_workers)) -ge 2 ]]; then
+                        base_workers=$(($total_threads - 1))
+                        echo -e "${CYAN}Workers:${RESET} ❌ ${RED}${BOLD}$active_workers${RESET} workers en ligne au lieu de ${GREEN}${BOLD}$base_workers${RESET}. (Slaves Hors-ligne)"
+                    else
+                        echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
+                    fi
+                    
+                    echo -e "${CYAN}Wallet:${RESET} ${BOLD}$owned_balance${RESET}"
+                    echo ""
                 else
-                    echo -e "${CYAN}Workers:${RESET} ${BOLD}$active_workers${RESET}"
+                    echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
                 fi
-                
-                echo -e "${CYAN}Wallet:${RESET} ${BOLD}$owned_balance${RESET}"
-                echo ""
             else
-                echo -e "❌ ${RED}Erreur : Impossible de récupérer les informations du cluster. Veuillez vérifier la connexion SSH.${RESET}"
+                echo -e "❌ ${RED}Erreur : Impossible de trouver le fichier node sur le master.${RESET}"
             fi
         else
             echo -e "❌ ${RED}Erreur : IP du master ou master_threads introuvables ou invalides dans le fichier JSON.${RESET}"
@@ -322,11 +315,189 @@ data_worker_cluster() {
     else
         echo -e "❌ ${RED}Erreur : Fichier de sauvegarde introuvable. Veuillez vérifier le chemin.${RESET}"
     fi
-
-    else
-        echo -e "❌ ${RED}Option non valide. Retour au menu principal.${RESET}"
-    fi
+  else
+      echo -e "❌ ${RED}Option non valide. Retour au menu principal.${RESET}"
+  fi
 }
+
+
+generate_data_worker_multiaddrs() {
+  local ip=$1
+  local threads=$2
+  local start_port=40001
+  local ports=()
+
+  if [[ $is_master == "true" ]]; then
+    threads=$((threads - 1))
+  fi
+
+  for ((i=0; i<threads; i++)); do
+    ports+=("'/ip4/$ip/tcp/$((start_port + i))'")
+  done
+
+  echo "${ports[@]}"
+}
+
+update_remote_config() {
+  local ip=$1
+
+  temp_config="/tmp/remote_config_$ip.yml"
+  echo -e "$cluster_config" > "$temp_config"
+
+  echo -e "\n⏳ Mise à jour de la configuration sur ${BOLD}$ip...${RESET}"
+  sshpass -p "$password" scp -o StrictHostKeyChecking=no "$temp_config" user@$ip:/tmp/cluster_config.yml
+
+  SSH_COMMAND="
+    sudo sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH &&
+    sudo rm /tmp/cluster_config.yml
+  "
+
+    # Commande distante correctement échappée
+  SSH_COMMAND="
+    if sudo grep -q 'dataWorkerMultiaddrs:' $CONFIG_PATH; then
+      echo -e '\n🔄 Suppression ancienne configuration dataWorkerMultiaddrs...';
+      sudo sed -i '/dataWorkerMultiaddrs:/,/]/d' $CONFIG_PATH;
+    fi;
+    echo -e '\n✅ Ajout de la nouvelle configuration dataWorkerMultiaddrs...';
+    sudo sed -i '/engine:/r /tmp/cluster_config.yml' $CONFIG_PATH;
+    sudo rm /tmp/cluster_config.yml;
+  "
+
+  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+  if [ $? -eq 0 ]; then
+    echo -e ""
+    echo -e "✅ Configuration mise à jour avec succès sur${BOLD} $ip.${RESET}"
+  else
+    echo -e ""
+    echo -e "❌ Erreur : Échec de la mise à jour sur${BOLD} $ip.${RESET}"
+  fi
+
+  sudo rm -f "$temp_config"
+}
+
+remove_config_from_file() {
+  # Demander le chemin du fichier de configuration
+  read -p "Entrez le chemin du fichier de configuration (ex: /path/to/cluster.json) : " config_file
+
+  # Vérification du fichier
+  if [ ! -f "$config_file" ]; then
+    echo -e "\n❌ ${RED}Fichier non trouvé : ${BOLD}$config_file${RESET}"
+    exit 1
+  fi
+
+  # Validation de la syntaxe JSON
+  if ! jq empty "$config_file" &>/dev/null; then
+    echo -e "\n❌ ${RED}Le fichier JSON est invalide. Veuillez vérifier sa syntaxe.${RESET}"
+    exit 1
+  fi
+
+  # Extraction des IP et configuration depuis le fichier JSON
+  master_ip=$(jq -r '.master_ip' "$config_file")
+  slaves_ips=()
+  while IFS= read -r slave; do
+    slaves_ips+=("$slave")
+  done < <(jq -r '.slaves[]' "$config_file")
+
+  echo -e "\n📄 Chargement de la configuration pour suppression :"
+  echo -e "   Master IP: $master_ip"
+  echo -e "   Slaves: ${slaves_ips[*]}"
+
+  echo ""
+  read -sp "(Par défaut 1 sur HiveOS) Votre mot de passe SSH : " password
+  echo ""
+
+  remove_remote_config() {
+    local ip=$1
+    echo -e "\n⏳ Suppression de la configuration sur ${BOLD}$ip...${RESET}"
+    echo ""
+    SSH_COMMAND="
+      if sudo grep -q 'dataWorkerMultiaddrs:' $CONFIG_PATH; then
+        echo -e '🔄 Suppression de la configuration dataWorkerMultiaddrs...';
+        sudo sed -i '/dataWorkerMultiaddrs:/,/]/d' $CONFIG_PATH;
+      else
+        echo -e 'ℹ️ Aucune configuration dataWorkerMultiaddrs trouvée sur $ip.';
+      fi;
+    "
+
+    # Exécution de la commande distante
+    sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+    if [ $? -eq 0 ]; then
+      echo -e "✅ Configuration supprimée avec succès sur ${BOLD}$ip.${RESET}"
+    else
+      echo -e "❌ Erreur : Échec de la suppression de la configuration sur ${BOLD}$ip.${RESET}"
+    fi
+  }
+
+  # Suppression de la configuration sur le Master
+  remove_remote_config "$master_ip"
+
+  # Suppression de la configuration sur chaque Slave
+  for slave_ip in "${slaves_ips[@]}"; do
+    remove_remote_config "$slave_ip"
+  done
+
+  echo ""
+  read -p "Souhaitez-vous tuer le cluster en cours et relancer le node en mode solo sur chaque machine distante ? (y/n) : " answer
+  if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+
+    echo -e "\n🛑 Fermeture du cluster 🕹️"
+    echo ""
+    # Fonction pour tuer le processus de cluster et relancer en solo
+    close_node_cluster() {
+      local ip=$1
+
+      SSH_COMMAND="sudo pkill -f quil"
+
+      # Exécution de la commande distante
+      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+      if [ $? -eq 0 ]; then
+        echo -e "✅ Fermeture du node cluster sur ${BOLD}$ip.${RESET}"
+      else
+        echo -e "❌ Erreur : Impossible de fermer le node cluster sur ${BOLD}$ip.${RESET}"
+      fi
+    }
+
+    # Redémarrer le master en solo
+    close_node_cluster "$master_ip"
+
+    # Redémarrer chaque slave en solo
+    for slave_ip in "${slaves_ips[@]}"; do
+      close_node_cluster "$slave_ip"
+    done
+
+    echo -e "\n⚡️ Execution nodes en solo 🖥️"
+
+    start_node_solo() {
+      local ip=$1
+      echo -e "\n⏳ Redémarrage du node en solo sur ${BOLD}$ip...${RESET}"
+
+      SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo screen -dmS quil ./release_autorun.sh"
+
+      # Exécution de la commande distante
+      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+      if [ $? -eq 0 ]; then
+        echo -e "✅ Node ${BOLD}$ip${RESET} démarré en solo."
+      else
+        echo -e "❌ Erreur : Impossible de lancer le node ${BOLD}$ip${RESET} en solo."
+      fi
+    }
+
+    # Redémarrer le master en solo
+    start_node_solo "$master_ip"
+
+    # Redémarrer chaque slave en solo
+    for slave_ip in "${slaves_ips[@]}"; do
+      start_node_solo "$slave_ip"
+    done
+
+  fi
+}
+
+
 
 # Menu principal
 echo -e ""
@@ -335,7 +506,8 @@ echo -e ""
 echo -e "${BOLD}1.${RESET} ${YELLOW}Démarrer un cluster manuellement${RESET} ⚡"
 echo -e "${BOLD}2.${RESET} ${YELLOW}Démarrer un cluster depuis un fichier de sauvegarde${RESET} 📄"
 echo -e "${BOLD}3.${RESET} ${YELLOW}Configurer un nouveau cluster${RESET} 🔧"
-echo -e "${BOLD}4.${RESET} ${YELLOW}Récupérer les informations d'un cluster/node (Balance/Workers etc..)${RESET} 💰"
+echo -e "${BOLD}4.${RESET} ${YELLOW}Démonter un cluster à partir d'un fichier de sauvegarde${RESET} 💥"
+echo -e "${BOLD}5.${RESET} ${YELLOW}Récupérer les informations d'un cluster/node (Balance/Workers etc..)${RESET} 💰"
 echo ""
 read -p "Veuillez choisir une option (1, 2, 3 ou 4) : " choice
 
@@ -422,6 +594,9 @@ elif [[ "$choice" == "3" ]]; then
   save_cluster_configuration "$config_file" "$master_ip" "$master_threads" "${slaves_ips[@]}"
 
   elif [[ "$choice" == "4" ]]; then
+    remove_config_from_file
+
+  elif [[ "$choice" == "5" ]]; then
     data_worker_cluster
 
 else
