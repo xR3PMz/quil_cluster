@@ -1,6 +1,13 @@
 <img width="535" alt="image" src="https://github.com/user-attachments/assets/d89a0c1b-3b61-4a91-b926-cd23e150c04a">
 
+ATTENTION: 
+
+Vos nodes doivent être démarré, minage Quil arrêté! (logique vous m'direz!)
+
+Pensez tout de même à faire une copie de votre config.yml avant l'utilisation de l'outil.
+
 Téléchargement: https://github.com/xR3PMz/quil_cluster/releases/tag/cluster_config
+
 
 HIVEOS:
   
@@ -59,13 +66,6 @@ LINUX:
 
 
 
-Attention, si vous avez déjà éditer vos config.yml veillez à ce qu'il n'y est pas de configuration existante.
-
-Pensez à bien utiliser la version utilisé par vos nodes. (Faire une configuration mixte sur des nodes Ubuntu/HiveOS n'est pour le moment pas possible)
-
-Vos nodes doivent être démarré, minage Quil arrêté! (logique vous m'direz!)
-
-Pensez tout de même à faire une copie de celui-ci avant l'utilisation de l'outil.
 
 
 
