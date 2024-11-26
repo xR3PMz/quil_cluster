@@ -11,6 +11,10 @@ Téléchargement: https://github.com/xR3PMz/quil_cluster/releases/tag/cluster_co
 
 
 HIVEOS:
+
+Tout vos nodes doivent être installé dans le répertoire: /home/user/ceremonyclient/node
+Veillez à ce que vos nodes soient accessible via SSH en activant l'option dans les paramètres du rig depuis HiveOS.
+Le mot de passe de vos nodes doivent être identique. Par défaut le mot de passe est 1. (Pour des raisons d'optimisations et le déploiement rapide.)
   
 1. Installer les dépendances necessaires sur chaque node:
    
@@ -40,6 +44,10 @@ HIVEOS:
         ./config_cluster_hiveOS.sh
 
 LINUX:
+
+Tout vos nodes doivent être installé dans le répertoire: /home/user_name/ceremonyclient/node
+Vous devez être identifier en user, si root l'outil ne pourra pas déployer.
+Le mot de passe de vos nodes doivent être identique. (Pour des raisons d'optimisations et le déploiement rapide.)
 
 1. Installer les dépendances necessaires sur chaque node:
 
