@@ -25,7 +25,7 @@ echo ""
 echo -e "${CYAN}                 MINING TOOLS                  ${RESET}"
 echo -e "${ITALIC}${BOLD}             WWW.ADVANCED-HASH.AI              ${RESET}"
 echo ""
-echo -e "${BOLD}  QUIL - Cluster Tools ${RED}${ITALIC}(HiveOS BETA v0.1) 🛠️   ${RESET}"
+echo -e "${BOLD}  QUIL - Cluster Tools ${RED}${ITALIC}(HiveOS BETA v0.1.1) 🛠️   ${RESET}"
 echo ""
 
 CONFIG_PATH="/home/user/ceremonyclient/node/.config/config.yml"
@@ -376,6 +376,38 @@ update_remote_config() {
   sudo rm -f "$temp_config"
 }
 
+# Fonction pour tuer le processus de cluster et relancer en solo
+close_node_cluster() {
+  local ip=$1
+
+  SSH_COMMAND="sudo pkill -f quil"
+
+  # Exécution de la commande distante
+  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+  if [ $? -eq 0 ]; then
+    echo -e "✅ Fermeture du node sur ${BOLD}$ip.${RESET}"
+  else
+    echo -e "❌ Erreur : Impossible de fermer le node sur ${BOLD}$ip.${RESET}"
+  fi
+}
+
+start_node_solo() {
+  local ip=$1
+  echo -e "\n⏳ Démarrage du node en solo sur ${BOLD}$ip...${RESET}"
+
+  SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo screen -dmS quil ./release_autorun.sh"
+
+  # Exécution de la commande distante
+  sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
+
+  if [ $? -eq 0 ]; then
+    echo -e "✅ Node ${BOLD}$ip${RESET} démarré en solo."
+  else
+    echo -e "❌ Erreur : Impossible de lancer le node ${BOLD}$ip${RESET} en solo."
+  fi
+}
+
 remove_config_from_file() {
   # Demander le chemin du fichier de configuration
   read -p "Entrez le chemin du fichier de configuration (ex: /path/to/cluster.json) : " config_file
@@ -444,21 +476,6 @@ remove_config_from_file() {
 
     echo -e "\n🛑 Fermeture du cluster 🕹️"
     echo ""
-    # Fonction pour tuer le processus de cluster et relancer en solo
-    close_node_cluster() {
-      local ip=$1
-
-      SSH_COMMAND="sudo pkill -f quil"
-
-      # Exécution de la commande distante
-      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
-
-      if [ $? -eq 0 ]; then
-        echo -e "✅ Fermeture du node cluster sur ${BOLD}$ip.${RESET}"
-      else
-        echo -e "❌ Erreur : Impossible de fermer le node cluster sur ${BOLD}$ip.${RESET}"
-      fi
-    }
 
     # Redémarrer le master en solo
     close_node_cluster "$master_ip"
@@ -469,22 +486,6 @@ remove_config_from_file() {
     done
 
     echo -e "\n⚡️ Execution nodes en solo 🖥️"
-
-    start_node_solo() {
-      local ip=$1
-      echo -e "\n⏳ Redémarrage du node en solo sur ${BOLD}$ip...${RESET}"
-
-      SSH_COMMAND="cd /home/user/ceremonyclient/node/ && sudo screen -dmS quil ./release_autorun.sh"
-
-      # Exécution de la commande distante
-      sshpass -p "$password" ssh -o StrictHostKeyChecking=no user@$ip "$SSH_COMMAND"
-
-      if [ $? -eq 0 ]; then
-        echo -e "✅ Node ${BOLD}$ip${RESET} démarré en solo."
-      else
-        echo -e "❌ Erreur : Impossible de lancer le node ${BOLD}$ip${RESET} en solo."
-      fi
-    }
 
     # Redémarrer le master en solo
     start_node_solo "$master_ip"
